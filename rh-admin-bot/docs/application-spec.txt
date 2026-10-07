@@ -1,0 +1,1440 @@
+RAS EL HANOUT — RH ADMIN APPLICATION BOT
+
+Build a complete, production-ready Discord Admin Application Bot for the Discord server:
+
+Ras El Hanout
+
+Use:
+
+* Node.js
+* Discord.js v14
+* SQLite
+* Persistent database storage
+* Slash commands
+* Discord buttons
+* Discord modals
+* DM-based application system
+
+The bot must survive restarts without losing applications, answers, timers, or review periods.
+
+⸻
+
+1. MOST IMPORTANT REQUIREMENT — LANGUAGE DISPLAY
+
+The application is bilingual:
+
+* Arabic
+* English
+
+IMPORTANT:
+
+DO NOT MIX Arabic and English on the same line.
+
+Every question must display as:
+
+السؤال بالعربية
+━━━━━━━━━━━━━━━━━━━━
+English question
+
+Arabic must always be in its own paragraph/block.
+
+English must always be in its own paragraph/block.
+
+Use RTL Unicode markers around Arabic text when necessary:
+
+const RTL = "\u200F";
+
+For example:
+
+const arabicText = `${RTL}ما هو رابط حسابك على الستيم؟${RTL}`;
+
+Do NOT create strings like:
+
+ما هو رابط حسابك؟ — What is your Steam profile link?
+
+because this can cause Arabic/English bidirectional rendering problems.
+
+⸻
+
+2. QUESTION EMBED FORMAT
+
+Every question DM should use an embed.
+
+Example:
+
+RH ADMIN APPLICATION
+Question 1 / 16
+العربية
+ما هو رابط حسابك على الستيم؟
+━━━━━━━━━━━━━━━━━━━━
+English
+What is your Steam profile link?
+Please reply with your answer.
+
+The Arabic section must always be above the English section.
+
+Use separate embed fields where appropriate.
+
+Recommended structure:
+
+embed.addFields(
+    {
+        name: "🇸🇦 العربية",
+        value: `${RTL}${question.arabic}${RTL}`
+    },
+    {
+        name: "🇬🇧 English",
+        value: question.english
+    }
+);
+
+This is extremely important.
+
+⸻
+
+3. PROJECT STRUCTURE
+
+Create:
+
+rh-admin-bot/
+│
+├── package.json
+├── package-lock.json
+├── .env
+├── .env.example
+├── .gitignore
+├── README.md
+│
+├── data/
+│   └── .gitkeep
+│
+├── logs/
+│   └── .gitkeep
+│
+└── src/
+    │
+    ├── index.js
+    │
+    ├── commands/
+    │   ├── autoconf.js
+    │   ├── config.js
+    │   └── application.js
+    │
+    ├── events/
+    │   ├── ready.js
+    │   ├── interactionCreate.js
+    │   ├── messageCreate.js
+    │   └── guildMemberRemove.js
+    │
+    ├── application/
+    │   ├── ApplicationManager.js
+    │   ├── ApplicationSession.js
+    │   ├── QuestionManager.js
+    │   ├── TimerManager.js
+    │   └── RoleManager.js
+    │
+    ├── database/
+    │   ├── database.js
+    │   ├── applications.js
+    │   ├── answers.js
+    │   ├── configuration.js
+    │   └── users.js
+    │
+    ├── embeds/
+    │   ├── mainApplication.js
+    │   ├── confirmation.js
+    │   ├── question.js
+    │   ├── submitted.js
+    │   ├── pending.js
+    │   ├── accepted.js
+    │   ├── denied.js
+    │   ├── underReview.js
+    │   ├── expired.js
+    │   ├── cancelled.js
+    │   ├── userLeft.js
+    │   └── readyForAdmin.js
+    │
+    ├── config/
+    │   ├── questions.js
+    │   ├── gifs.js
+    │   └── constants.js
+    │
+    └── utils/
+        ├── permissions.js
+        ├── roles.js
+        ├── channels.js
+        ├── validation.js
+        ├── logger.js
+        ├── ids.js
+        └── time.js
+
+⸻
+
+4. QUESTIONS.JS
+
+Create:
+
+src/config/questions.js
+
+Use this EXACT structure.
+
+const RTL = "\u200F";
+module.exports = [
+    {
+        number: 1,
+        key: "steam_profile",
+        arabic: `${RTL}ما هو رابط حسابك على الستيم؟${RTL}`,
+        english: "What is your Steam profile link?",
+        type: "steam_url",
+        required: true,
+        maxLength: 500
+    },
+    {
+        number: 2,
+        key: "age",
+        arabic: `${RTL}ما هو عمرك؟${RTL}`,
+        english: "What is your age?",
+        type: "number",
+        required: true,
+        min: 13,
+        max: 100,
+        maxLength: 3
+    },
+    {
+        number: 3,
+        key: "cs2_hours",
+        arabic: `${RTL}كم عدد الساعات التي لعبتها في CS2؟${RTL}`,
+        english: "How many hours do you have in CS2?",
+        type: "cs2_hours",
+        required: true,
+        min: 1000,
+        maxLength: 10
+    },
+    {
+        number: 4,
+        key: "activity",
+        arabic:
+            `${RTL}كم من الوقت تقضي عادةً على السيرفر وديسكورد يوميًا؟ ` +
+            `يرجى إعطاؤنا تقديرًا صادقًا لنشاطك اليومي/الأسبوعي.${RTL}`,
+        english:
+            "How active are you on the server and Discord? " +
+            "Please give an honest estimate of your daily/weekly activity.",
+        type: "text",
+        required: true,
+        maxLength: 4000
+    },
+    {
+        number: 5,
+        key: "admin_experience",
+        arabic:
+            `${RTL}هل لديك خبرة في مجال الأدمين؟ إذا كانت الإجابة نعم، ` +
+            `أخبرنا عن خبرتك واذكر السيرفرات التي كنت أدمنًا فيها.${RTL}`,
+        english:
+            "Do you have previous experience managing CS2 servers? " +
+            "If yes, list the servers you worked on and explain your responsibilities.",
+        type: "text",
+        required: true,
+        maxLength: 4000
+    },
+    {
+        number: 6,
+        key: "plugin_experience",
+        arabic:
+            `${RTL}ما هي خبرتك مع إضافات CS2 أو CounterStrikeSharp؟ ` +
+            `اذكر الإضافات أو الأنظمة أو خصائص السيرفر التي سبق لك العمل عليها.${RTL}`,
+        english:
+            "What experience do you have with CS2 plugins or CounterStrikeSharp? " +
+            "List the plugins, systems, or server features you have worked with.",
+        type: "text",
+        required: true,
+        maxLength: 4000
+    },
+    {
+        number: 7,
+        key: "troubleshooting",
+        arabic:
+            `${RTL}إذا توقفت إضافة عن العمل أو ظهر خطأ في Console الخاص بالسيرفر، ` +
+            `ماذا ستفعل؟ اشرح لنا خطواتك في حل المشكلة.${RTL}`,
+        english:
+            "If a plugin stops working or an error appears in the server console, " +
+            "what would you do? Explain your troubleshooting process.",
+        type: "text",
+        required: true,
+        maxLength: 4000
+    },
+    {
+        number: 8,
+        key: "server_configuration",
+        arabic:
+            `${RTL}هل لديك خبرة في إعدادات السيرفر، الصلاحيات، قواعد البيانات، ` +
+            `أو ملفات إعداد CS2؟ اشرح لنا ما الذي تستطيع التعامل معه.${RTL}`,
+        english:
+            "Do you have experience with server configuration, permissions, databases, " +
+            "or CS2 configuration files? Explain what you can work with.",
+        type: "text",
+        required: true,
+        maxLength: 4000
+    },
+    {
+        number: 9,
+        key: "friends_and_admin_abuse",
+        arabic:
+            `${RTL}كيف ستتعامل مع لاعب يخالف قوانين السيرفر حتى وإن كان صديقًا لك؟ ` +
+            `وكيف ستتعامل مع أدمن آخر يسيء استخدام صلاحياته ضد اللاعبين؟${RTL}`,
+        english:
+            "How would you handle a player breaking the rules if they were your friend? " +
+            "How would you handle another admin abusing their permissions against players?",
+        type: "text",
+        required: true,
+        maxLength: 4000
+    },
+    {
+        number: 10,
+        key: "why_rh",
+        arabic:
+            `${RTL}لماذا تريد الانضمام إلى طاقم راس الحانوت؟ ` +
+            `وفي ماذا تستطيع مساعدة السيرفر بعيدًا عن معاقبة اللاعبين؟${RTL}`,
+        english:
+            "Why do you want to join the RH Admin Team, " +
+            "and what can you contribute to the server besides player moderation?",
+        type: "text",
+        required: true,
+        maxLength: 4000
+    },
+    {
+        number: 11,
+        key: "cheater_report",
+        arabic:
+            `${RTL}لاعب قام بالتبليغ عن شخص يشتبه بأنه يستخدم الغش، ` +
+            `ولكنك شخصيًا لم تلاحظ أي شيء مريب. ماذا ستفعل قبل اتخاذ أي إجراء؟${RTL}`,
+        english:
+            "A player reports someone for cheating, but you personally don't see anything suspicious. " +
+            "What would you do before taking action?",
+        type: "text",
+        required: true,
+        maxLength: 4000
+    },
+    {
+        number: 12,
+        key: "suspected_cheater",
+        arabic:
+            `${RTL}أنت تراقب لاعبًا مشتبهًا به باستخدام الغش، وفجأة بدأ يلعب بشكل طبيعي ` +
+            `لأنه لاحظ وجود أدمن يراقبه. كيف ستقوم بالتحقيق في الأمر؟${RTL}`,
+        english:
+            "You are spectating a suspected cheater and they suddenly start playing normally " +
+            "because they know an admin is watching. How would you investigate?",
+        type: "text",
+        required: true,
+        maxLength: 4000
+    },
+    {
+        number: 13,
+        key: "insulting_admin",
+        arabic:
+            `${RTL}إذا بدأ لاعب بشتمك أو إهانتك بعد أن قمت بتحذيره، واستمر في ذلك ` +
+            `دون أن يرتكب مخالفة أخرى بشكل مباشر، كيف ستتعامل مع الموقف؟${RTL}`,
+        english:
+            "A player starts insulting you after you warn them. " +
+            "They continue but never directly break another rule. How would you handle the situation?",
+        type: "text",
+        required: true,
+        maxLength: 4000
+    },
+    {
+        number: 14,
+        key: "admin_mistake",
+        arabic:
+            `${RTL}إذا ارتكبت خطأ كأدمن وقمت بمعاقبة اللاعب الخطأ، ` +
+            `ماذا ستفعل مباشرة بعد اكتشاف الخطأ؟${RTL}`,
+        english:
+            "You make an admin mistake and punish the wrong player. " +
+            "What would you do immediately after realizing it?",
+        type: "text",
+        required: true,
+        maxLength: 4000
+    },
+    {
+        number: 15,
+        key: "admin_orders",
+        arabic:
+            `${RTL}إذا طلب منك أدمن آخر معاقبة لاعب، ولكنك لم تشاهد ما حدث بنفسك، ` +
+            `هل ستقوم بمعاقبته؟ اشرح السبب.${RTL}`,
+        english:
+            "An admin tells you to punish a player, but you did not personally witness what happened. " +
+            "Would you do it? Explain why.",
+        type: "text",
+        required: true,
+        maxLength: 4000
+    },
+    {
+        number: 16,
+        key: "vip_rule_break",
+        arabic:
+            `${RTL}إذا قام لاعب مشهور أو VIP بمخالفة أحد قوانين السيرفر، ` +
+            `وبدأ عدة لاعبين يطلبون منك عدم معاقبته، ماذا ستفعل؟${RTL}`,
+        english:
+            "A popular player or VIP breaks a server rule, and several players ask you not to punish them. " +
+            "What would you do?",
+        type: "text",
+        required: true,
+        maxLength: 4000
+    }
+];
+
+⸻
+
+5. QUESTION EMBED
+
+Create:
+
+src/embeds/question.js
+
+IMPORTANT:
+
+The Arabic and English MUST be separate embed fields.
+
+const {
+    EmbedBuilder
+} = require("discord.js");
+const gifs = require("../config/gifs");
+const RTL = "\u200F";
+function createQuestionEmbed(question, guild, totalQuestions = 16) {
+    const embed = new EmbedBuilder()
+        .setTitle("RH ADMIN APPLICATION")
+        .setDescription(
+            `**Question ${question.number} / ${totalQuestions}**`
+        )
+        .addFields(
+            {
+                name: "🇸🇦 العربية",
+                value: `${RTL}${question.arabic}${RTL}`
+            },
+            {
+                name: "━━━━━━━━━━━━━━━━━━━━",
+                value: " "
+            },
+            {
+                name: "🇬🇧 English",
+                value: question.english
+            }
+        )
+        .setFooter({
+            text: "Ras El Hanout • RH Admin Applications"
+        })
+        .setTimestamp();
+    if (guild) {
+        const icon = guild.iconURL({
+            extension: "png",
+            size: 256
+        });
+        if (icon) {
+            embed.setThumbnail(icon);
+        }
+    }
+    if (gifs.QUESTION) {
+        embed.setImage(gifs.QUESTION);
+    }
+    return embed;
+}
+module.exports = {
+    createQuestionEmbed
+};
+
+⸻
+
+6. IMPORTANT ARABIC RENDERING RULE
+
+Do not use:
+
+.setDescription(
+    `${question.arabic} — ${question.english}`
+)
+
+Do not use:
+
+value: `${question.arabic}\n${question.english}`
+
+Instead always use:
+
+.addFields(
+    {
+        name: "🇸🇦 العربية",
+        value: `${RTL}${question.arabic}${RTL}`
+    },
+    {
+        name: "━━━━━━━━━━━━━━━━━━━━",
+        value: " "
+    },
+    {
+        name: "🇬🇧 English",
+        value: question.english
+    }
+)
+
+This keeps the two languages visually separated.
+
+⸻
+
+7. CONFIRMATION MESSAGE
+
+Before Question 1, send:
+
+Application Guidelines & Confirmation
+Before proceeding, please review the following conditions:
+• Format: The application consists of a series of questions.
+• Time Limit: You are allowed exactly 1 hour to complete and submit your responses.
+• Session Expiration: If the time limit is exceeded, your session will time out, and the application must be restarted.
+• Cancellation: Should you need to abort the process, select the "Cancel" button at any time.
+Do you wish to proceed?
+
+Buttons:
+
+✅ Confirm Apply
+❌ Cancel Apply
+
+⸻
+
+8. APPLICATION FLOW
+
+User clicks:
+
+📝 Apply for Admin
+
+Bot checks:
+
+1. User is in the server.
+2. User is not already applying.
+3. User does not have RH Under Review.
+4. User does not have RH Admin Denied.
+5. User does not have RH Admin.
+6. User is not within cooldown.
+7. User has required roles.
+8. Bot can DM the user.
+
+If everything is valid:
+
+Open a DM application session.
+
+⸻
+
+9. TIMER
+
+After:
+
+Confirm Apply
+
+start exactly:
+
+60 minutes
+
+Store:
+
+startedAt
+expiresAt
+
+in SQLite.
+
+Do not rely only on JavaScript memory.
+
+The timer must survive bot restarts.
+
+⸻
+
+10. CANCEL
+
+Before confirmation:
+
+* No timer.
+* No cooldown.
+* No role changes.
+
+During questions:
+
+* Stop timer.
+* Save status as CANCELLED.
+* No cooldown.
+* No Under Review role.
+* User may apply again.
+
+⸻
+
+11. APPLICATION ROLES
+
+/autoconf creates:
+
+RH Applicant
+RH Under Review
+RH Admin Denied
+
+It MUST NOT create:
+
+RH Admin
+
+⸻
+
+12. RH ADMIN ROLE
+
+RH Admin is manually managed.
+
+The bot must NEVER automatically assign:
+
+member.roles.add(RH_ADMIN_ROLE_ID)
+
+after the 7-day period.
+
+After 7 days:
+
+Application status becomes:
+
+READY_FOR_ADMIN_ROLE
+
+Staff receives:
+
+RH UNDER REVIEW COMPLETE
+Applicant: @User
+Application ID: RH-000123
+The applicant has completed the 7-day Under Review period.
+They are now eligible for manual RH Admin consideration.
+The bot will NOT assign the RH Admin role automatically.
+
+⸻
+
+13. ACCEPT
+
+When staff clicks:
+
+✅ Accept
+
+The bot:
+
+* Sets application status to ACCEPTED.
+* Adds RH Under Review.
+* Keeps RH Applicant.
+* Does NOT add RH Admin.
+* Saves underReviewStartedAt.
+* Saves underReviewEndsAt.
+* Sends accepted DM.
+* Posts accepted application.
+* Logs staff member.
+
+Under Review duration:
+
+7 days
+
+⸻
+
+14. DENY
+
+When staff clicks:
+
+❌ Deny
+
+Open a modal requesting:
+
+Denial Reason
+
+Then:
+
+* Status = DENIED
+* Add RH Admin Denied
+* Remove RH Under Review
+* Do not add RH Admin
+* Send denial DM
+* Post denied application
+* Log reason and staff member
+
+⸻
+
+15. ACCEPTED MESSAGE
+
+Send privately:
+
+RH ADMIN APPLICATION
+We’re pleased to inform you that your application for the RH Admin Team has been accepted. 🎉
+Congratulations, and welcome to the RH Admin Team! ❤️
+A staff member will contact you shortly with further information regarding the next steps, your responsibilities, and the trial period.
+Please remember that being an admin is a responsibility, not a status. Treat every player fairly, use your permissions responsibly, and represent the RH community with professionalism. 💎
+Welcome to the team, and we wish you the best of luck!
+
+⸻
+
+16. DENIED MESSAGE
+
+Send privately:
+
+RH ADMIN APPLICATION
+Thank you for taking the time to apply for the RH Admin Team and for your interest in helping our community. ❤️
+After reviewing your application, we’re unfortunately unable to accept it at this time.
+Please don’t take this as a final decision. You’re welcome to apply again in the future once you’ve gained more experience or meet the requirements. We’d be happy to review your application again when the time is right.
+We truly appreciate your interest in RH and the effort you put into your application. We wish you the best, and we hope to see you apply again in the future. ❤️
+
+Then:
+
+Staff Reason
+{denial reason}
+
+⸻
+
+17. SUBMISSION
+
+After Question 16:
+
+Send:
+
+Thank you! Your application has been successfully submitted.
+
+Then:
+
+RH ADMIN APPLICATION
+Your application has been submitted successfully.
+The RH Admin Team will review your application.
+Please wait for a decision from the staff team.
+
+Add:
+
+RH Applicant
+
+and:
+
+RH Under Review
+
+⸻
+
+18. PENDING CHANNEL
+
+Create:
+
+🟡・pending-applications
+
+Send a professional embed containing:
+
+* Application ID
+* Applicant
+* Discord ID
+* Steam profile
+* Age
+* CS2 hours
+* Activity
+* Admin experience
+* Plugin experience
+* Troubleshooting
+* Configuration experience
+* Friends/admin abuse
+* Why RH
+* Cheater report
+* Suspected cheater
+* Insulting admin
+* Admin mistake
+* Admin orders
+* VIP situation
+* Submitted time
+* Status
+
+Buttons:
+
+✅ Accept
+❌ Deny
+
+⸻
+
+19. ACCEPTED CHANNEL
+
+Create:
+
+🟢・accepted-applications
+
+Show:
+
+RH ADMIN APPLICATION — ACCEPTED
+Applicant: @User
+Application ID: RH-000123
+Status:
+UNDER REVIEW
+Under Review Started:
+DATE
+Under Review Ends:
+DATE
+Accepted By:
+@Staff
+
+Important:
+
+Do not claim the user is already an RH Admin.
+
+⸻
+
+20. READY FOR ADMIN
+
+After 7 days:
+
+Create/send:
+
+RH ADMIN APPLICATION — REVIEW COMPLETE
+Applicant: @User
+Application ID:
+RH-000123
+7-Day Under Review:
+COMPLETED
+Status:
+READY FOR MANUAL RH ADMIN ASSIGNMENT
+The applicant has completed the required 7-day Under Review period.
+Staff must manually decide whether to assign the RH Admin role.
+
+⸻
+
+21. DENIED CHANNEL
+
+Create:
+
+🔴・denied-applications
+
+Show:
+
+* Applicant
+* Application ID
+* Denied by
+* Date
+* Reason
+* Status
+
+⸻
+
+22. LOG CHANNEL
+
+Create:
+
+📋・application-logs
+
+Log:
+
+* Application started
+* Confirmed
+* Cancelled
+* Question answered
+* Submitted
+* Accepted
+* Denied
+* Denial reason
+* Expired
+* User left
+* Under Review started
+* Under Review completed
+* Configuration changes
+* Errors
+* Role changes
+
+⸻
+
+23. /AUTOCONF
+
+Create:
+
+/autoconf
+
+It creates missing:
+
+Category:
+
+🛡️ RH APPLICATIONS
+
+Channels:
+
+📝・apply
+🟡・pending-applications
+🟢・accepted-applications
+🔴・denied-applications
+📋・application-logs
+
+Roles:
+
+RH Applicant
+RH Under Review
+RH Admin Denied
+
+DO NOT create:
+
+RH Admin
+
+If objects already exist, reuse them.
+
+Do not create duplicates.
+
+⸻
+
+24. /AUTOCONF SUMMARY
+
+After setup:
+
+RH APPLICATION SYSTEM
+✅ Application Category
+✅ Apply Channel
+✅ Pending Channel
+✅ Accepted Channel
+✅ Denied Channel
+✅ Application Logs
+✅ RH Applicant
+✅ RH Under Review
+✅ RH Admin Denied
+⚪ RH Admin
+Manual only
+The RH Admin role will never be automatically created or assigned by the bot.
+After the 7-day Under Review period, staff must manually assign RH Admin if appropriate.
+
+⸻
+
+25. MAIN APPLICATION EMBED
+
+In:
+
+📝・apply
+
+Create:
+
+RAS EL HANOUT — ADMIN APPLICATION
+Interested in joining the RH Admin Team?
+If you believe you have the experience, activity, maturity, and technical knowledge required to help manage the server, you can submit an application below.
+Please answer every question honestly and provide detailed answers where requested.
+Requirements
+• Minimum 1000 hours in CS2
+• Active on the RH server
+• Active in the RH Discord
+• Professional behavior
+• Knowledge of server administration is strongly preferred
+• Ability to handle situations fairly and responsibly
+
+Button:
+
+📝 Apply for Admin
+
+Use:
+
+* Server icon as thumbnail.
+* Main application GIF.
+
+⸻
+
+26. GIF SYSTEM
+
+Create:
+
+src/config/gifs.js
+
+module.exports = {
+    MAIN_APPLICATION: process.env.MAIN_APPLICATION_GIF || null,
+    CONFIRMATION: process.env.CONFIRMATION_GIF || null,
+    QUESTION: process.env.QUESTION_GIF || null,
+    SUBMITTED: process.env.SUBMITTED_GIF || null,
+    PENDING: process.env.PENDING_GIF || null,
+    ACCEPTED: process.env.ACCEPTED_GIF || null,
+    DENIED: process.env.DENIED_GIF || null,
+    UNDER_REVIEW: process.env.UNDER_REVIEW_GIF || null,
+    EXPIRED: process.env.EXPIRED_GIF || null,
+    CANCELLED: process.env.CANCELLED_GIF || null,
+    USER_LEFT: process.env.USER_LEFT_GIF || null,
+    READY_FOR_ADMIN: process.env.READY_FOR_ADMIN_GIF || null
+};
+
+⸻
+
+27. GIF NAMES
+
+Use these names when selecting GIFs:
+
+MAIN_APPLICATION_GIF
+RH Application — Welcome
+CONFIRMATION_GIF
+RH Application — Rules / Confirmation
+QUESTION_GIF
+RH Application — Question / Thinking
+SUBMITTED_GIF
+RH Application — Submitted / Success
+PENDING_GIF
+RH Application — Pending
+ACCEPTED_GIF
+RH Application — Accepted / Congratulations
+DENIED_GIF
+RH Application — Denied / Respectful
+UNDER_REVIEW_GIF
+RH Application — Under Review
+EXPIRED_GIF
+RH Application — Time Expired
+CANCELLED_GIF
+RH Application — Cancelled
+USER_LEFT_GIF
+RH Application — User Left
+READY_FOR_ADMIN_GIF
+RH Application — 7 Day Review Complete
+
+⸻
+
+28. DATABASE
+
+Use SQLite.
+
+Applications table:
+
+id
+application_number
+guild_id
+user_id
+status
+created_at
+started_at
+expires_at
+submitted_at
+under_review_started_at
+under_review_ends_at
+decision_at
+decision_by
+denial_reason
+updated_at
+
+Answers table:
+
+id
+application_id
+question_number
+question_key
+answer
+created_at
+
+Configuration table:
+
+guild_id
+application_category_id
+apply_channel_id
+pending_channel_id
+accepted_channel_id
+denied_channel_id
+logs_channel_id
+applicant_role_id
+under_review_role_id
+denied_role_id
+required_role_ids
+manager_role_ids
+ping_role_ids
+cooldown_days
+time_limit_minutes
+warning_minutes
+main_embed_message_id
+main_embed_channel_id
+
+⸻
+
+29. APPLICATION STATUSES
+
+Use:
+
+ACTIVE
+SUBMITTED
+PENDING
+ACCEPTED
+DENIED
+CANCELLED
+EXPIRED
+USER_LEFT
+READY_FOR_ADMIN_ROLE
+
+⸻
+
+30. APPLICATION ID
+
+Generate IDs:
+
+RH-000001
+RH-000002
+RH-000003
+
+Never reuse an application ID.
+
+⸻
+
+31. REQUIRED ROLE SYSTEM
+
+Support:
+
+REQUIRED_ROLE_IDS=
+REQUIRED_ROLE_MODE=ANY
+
+Modes:
+
+ANY
+ALL
+
+⸻
+
+32. MANAGER ROLE SYSTEM
+
+Support:
+
+APPLICATION_MANAGER_ROLE_IDS=
+
+If configured:
+
+Only those roles can Accept/Deny.
+
+If empty:
+
+Use the staff channel’s Discord permissions.
+
+⸻
+
+33. PING ROLES
+
+Support:
+
+PING_ROLE_IDS=
+
+When application is submitted:
+
+Ping the configured roles in the Pending Applications channel.
+
+Never ping:
+
+@everyone
+@here
+
+unless explicitly configured by server administrators.
+
+⸻
+
+34. LEAVING SERVER
+
+If a user leaves while:
+
+* Application active
+* Application pending
+* Under Review
+
+mark the application:
+
+USER_LEFT
+
+Reason:
+
+User left the server.
+
+Do not attempt to DM them after they leave.
+
+Log the event.
+
+⸻
+
+35. DM FAILURE
+
+If DMs are disabled:
+
+I couldn't send you a DM.
+Please enable Direct Messages from this server and try again.
+
+Do not start the application until DM communication is possible.
+
+⸻
+
+36. ANSWER VALIDATION
+
+Question 1:
+
+Validate Steam profile URL.
+
+Question 2:
+
+Numeric age.
+
+Question 3:
+
+Numeric CS2 hours.
+
+Minimum:
+
+1000
+
+If below 1000:
+
+The RH Admin Team currently requires at least 1000 hours in CS2.
+Please provide your actual CS2 hours.
+
+Questions 4-16:
+
+Normal text.
+
+Maximum:
+
+4000 characters
+
+⸻
+
+37. TIMER WARNING
+
+At 10 minutes remaining:
+
+⏰ RH ADMIN APPLICATION
+You have approximately 10 minutes remaining to complete your application.
+Please make sure you submit all remaining answers before the timer expires.
+
+Configurable with:
+
+ENABLE_TIMER_WARNING=true
+
+⸻
+
+38. TIMER RECOVERY
+
+Never rely only on:
+
+setTimeout()
+
+Store expiration time in SQLite.
+
+On bot restart:
+
+1. Load active applications.
+2. Check expiration.
+3. Restore timers.
+4. Continue sessions that are still valid.
+5. Expire sessions whose deadline has passed.
+
+⸻
+
+39. 7-DAY TIMER RECOVERY
+
+Also persist:
+
+under_review_started_at
+under_review_ends_at
+
+On bot restart:
+
+Check all accepted applications.
+
+If:
+
+current_time >= under_review_ends_at
+
+then change:
+
+ACCEPTED
+
+to:
+
+READY_FOR_ADMIN_ROLE
+
+and notify staff.
+
+Again:
+
+DO NOT assign RH Admin.
+
+⸻
+
+40. ROLE MANAGER
+
+The RoleManager must support:
+
+addApplicantRole()
+addUnderReviewRole()
+removeUnderReviewRole()
+addDeniedRole()
+removeDeniedRole()
+
+Do not automatically manage the RH Admin role.
+
+⸻
+
+41. SECURITY
+
+Every button must verify:
+
+* Guild
+* Application exists
+* Application status
+* Staff authorization
+* Correct application ID
+
+Never trust button custom IDs alone.
+
+Example:
+
+rh_accept_RH-000123
+rh_deny_RH-000123
+rh_cancel_RH-000123
+
+⸻
+
+42. DUPLICATE PROTECTION
+
+Prevent:
+
+* Multiple active applications.
+* Duplicate role creation.
+* Duplicate channel creation.
+* Duplicate main application embeds.
+* Double acceptance.
+* Double denial.
+* Multiple Under Review roles.
+
+⸻
+
+43. MAIN EMBED CONFIGURATION
+
+Allow:
+
+/config set-main-embed
+
+Store:
+
+main_embed_channel_id
+main_embed_message_id
+
+The bot should edit an existing configured message instead of creating duplicates.
+
+⸻
+
+44. STAFF COMMANDS
+
+Implement:
+
+/autoconf
+/config
+/application status user:@User
+/application view id:RH-000123
+/application reset user:@User
+/application cancel id:RH-000123
+
+Restrict staff commands appropriately.
+
+⸻
+
+45. ENVIRONMENT VARIABLES
+
+Create .env.example:
+
+DISCORD_TOKEN=
+CLIENT_ID=
+GUILD_ID=
+DATABASE_PATH=./data/rh_applications.sqlite
+DEFAULT_COOLDOWN_DAYS=7
+APPLICATION_TIME_LIMIT_MINUTES=60
+APPLICATION_WARNING_MINUTES=10
+UNDER_REVIEW_DAYS=7
+REQUIRED_ROLE_IDS=
+REQUIRED_ROLE_MODE=ANY
+APPLICATION_MANAGER_ROLE_IDS=
+PING_ROLE_IDS=
+APPLICATION_CATEGORY_ID=
+MAIN_APPLY_CHANNEL_ID=
+PENDING_CHANNEL_ID=
+ACCEPTED_CHANNEL_ID=
+DENIED_CHANNEL_ID=
+APPLICATION_LOGS_CHANNEL_ID=
+RH_APPLICANT_ROLE_ID=
+RH_UNDER_REVIEW_ROLE_ID=
+RH_ADMIN_DENIED_ROLE_ID=
+# MANUAL ONLY
+# The bot must NOT create or automatically assign this role.
+RH_ADMIN_ROLE_ID=
+MAIN_APPLICATION_MESSAGE_ID=
+MAIN_APPLICATION_GIF=
+CONFIRMATION_GIF=
+QUESTION_GIF=
+SUBMITTED_GIF=
+PENDING_GIF=
+ACCEPTED_GIF=
+DENIED_GIF=
+UNDER_REVIEW_GIF=
+EXPIRED_GIF=
+CANCELLED_GIF=
+USER_LEFT_GIF=
+READY_FOR_ADMIN_GIF=
+MAX_ANSWER_LENGTH=4000
+ENABLE_TIMER_WARNING=true
+AUTOCONF_CREATE_CHANNELS=true
+AUTOCONF_CREATE_ROLES=true
+NODE_ENV=production
+
+⸻
+
+46. IMPORTANT ROLE RULE
+
+The final role system MUST be:
+
+RH Applicant
+        ↓
+Application Submitted
+        ↓
+RH Under Review
+        ↓
+Staff Accepts
+        ↓
+7-Day Under Review
+        ↓
+READY_FOR_ADMIN_ROLE
+        ↓
+Staff manually decides
+        ↓
+RH Admin
+
+Denied:
+
+Application
+        ↓
+Denied
+        ↓
+RH Admin Denied
+
+The bot NEVER automatically creates or assigns:
+
+RH Admin
+
+⸻
+
+47. FINAL QUALITY REQUIREMENTS
+
+The finished bot must:
+
+* Use Discord.js v14.
+* Use SQLite.
+* Persist all applications.
+* Persist all answers.
+* Persist timers.
+* Recover after restart.
+* Use private DMs for questions.
+* Use normal text responses for answers.
+* Use embeds for questions.
+* Keep Arabic and English completely separate.
+* Use RTL Unicode markers.
+* Never mix Arabic and English in one line.
+* Use the RH server icon.
+* Use individual GIFs.
+* Support /autoconf.
+* Prevent duplicate setup.
+* Create the three automatic RH roles.
+* Never create RH Admin automatically.
+* Never assign RH Admin automatically.
+* Track the 7-day Under Review period.
+* Notify staff when the 7 days are complete.
+* Allow staff to manually assign RH Admin.
+* Handle cancellations.
+* Handle expiration.
+* Handle users leaving.
+* Handle DM failures.
+* Handle duplicate applications.
+* Handle database errors.
+* Handle Discord API errors.
+* Use proper permissions.
+* Use secure button validation.
+* Use clean professional embeds.
+
+Most importantly:
+
+THE ARABIC TEXT MUST NEVER BE MIXED WITH THE ENGLISH TEXT.
+
+Every question must be visually formatted:
+
+🇸🇦 العربية
+[Arabic question]
+━━━━━━━━━━━━━━━━━━━━
+🇬🇧 English
+[English question]
+
+Do not combine the two languages into the same paragraph or line.

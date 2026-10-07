@@ -1,15 +1,17 @@
-# [Project name]
+# Ras El Hanout Admin Applications Bot
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A Discord.js bot for private bilingual admin applications, persisted in SQLite with restart-safe timers and staff review.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/rh-admin-bot start` — run the Discord application bot
+- `pnpm --filter @workspace/rh-admin-bot dev` — run the bot with Node watch mode
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required secret: `DISCORD_TOKEN` — Replit Secret; never commit or print it
+- Optional env: `GUILD_ID` for single-server slash command registration and restriction
 
 ## Stack
 
@@ -22,15 +24,22 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `rh-admin-bot/src/` — Discord bot, commands, application flow, and SQLite persistence
+- `rh-admin-bot/assets/gifs/` — supplied status GIFs
+- `rh-admin-bot/data/` — persistent SQLite database (ignored by Git)
+- `rh-admin-bot/docs/application-spec.txt` — original application requirements
+- `rh-admin-bot/README.md` — setup, permissions, and operator guide
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The bot token is supplied only through Replit Secrets as `DISCORD_TOKEN`.
+- `RH Admin` is manual-only: the bot neither creates nor assigns the role.
+- The bot uploads supplied GIFs once to the private logs channel when hosted URLs are not configured.
+- Timers and application state are stored in SQLite; timers are restored when the bot reconnects.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Applicants complete the 16-question Arabic/English application in DMs. Staff review pending submissions, record decisions, and receive a notice when the seven-day Under Review period is complete.
 
 ## User preferences
 
@@ -38,7 +47,9 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Enable the Discord Server Members and Message Content intents in the Developer Portal.
+- Place the bot role above the three bot-managed applicant/review/denied roles.
+- Set `GUILD_ID` for fast server-specific command updates; without it, commands register globally.
 
 ## Pointers
 
